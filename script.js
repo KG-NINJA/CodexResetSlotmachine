@@ -161,6 +161,69 @@ async function fetchStatus() {
 const flashOverlay = document.getElementById('flash-overlay');
 const speedLinesContainer = document.getElementById('speed-lines');
 
+// --- SOUND ENGINE ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    const now = audioCtx.currentTime;
+
+    if (type === 'spin') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 2);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 2);
+        osc.start();
+        osc.stop(now + 2);
+    } else if (type === 'stop') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc.start();
+        osc.stop(now + 0.2);
+    } else if (type === 'flash') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.1);
+        osc.start();
+        osc.stop(now + 0.1);
+    } else if (type === 'win') {
+        osc.type = 'triangle';
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((f, i) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = 'triangle';
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(f, now + i * 0.1);
+            g.gain.setValueAtTime(0.2, now + i * 0.1);
+            g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.5);
+            o.start(now + i * 0.1);
+            o.stop(now + i * 0.1 + 0.5);
+        });
+    } else if (type === 'fail') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.linearRampToValueAtTime(40, now + 0.5);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        osc.start();
+        osc.stop(now + 0.5);
+    }
+}
+
 function triggerFlash() {
     flashOverlay.style.opacity = '1';
     flashOverlay.style.transition = 'none';
@@ -205,6 +268,7 @@ async function spin() {
     
     // 全リール高速回転
     reels.forEach(r => r.currentSpeed = 0.6 + Math.random() * 0.4);
+    playSound('spin');
 
     await new Promise(r => setTimeout(r, 2000));
     
@@ -230,6 +294,7 @@ async function spin() {
             
             // 決定の瞬間！フラッシュ
             triggerFlash();
+            playSound('flash');
             showSpeedLines(false);
         } else {
             statusText.textContent = `${i + 1}番目 確定...`;
@@ -243,6 +308,7 @@ async function spin() {
             await new Promise(r => requestAnimationFrame(r));
         }
         reels[i].currentSpeed = 0;
+        playSound('stop');
         
         if (!isLastReel) await new Promise(r => setTimeout(r, 500));
     }
@@ -254,12 +320,17 @@ async function spin() {
         statusText.style.color = '#00ff00';
         statusText.style.fontSize = '2.5rem';
         activeParticleSystem = initParticles('happy');
-        // 勝利のフラッシュ
-        for(let i=0; i<3; i++) setTimeout(triggerFlash, i*200);
+        // 勝利のフラッシュ & サウンド
+        playSound('win');
+        for(let i=0; i<3; i++) setTimeout(() => {
+            triggerFlash();
+            playSound('flash');
+        }, i*200);
     } else {
         statusText.textContent = '💀 FAILED... NO RESET YET 💀';
         statusText.style.color = '#ff3333';
         activeParticleSystem = initParticles('sad');
+        playSound('fail');
     }
 
     await new Promise(r => setTimeout(r, 3000));
