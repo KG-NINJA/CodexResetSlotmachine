@@ -145,6 +145,7 @@ function initParticles(type) {
 const spinButton = document.getElementById('spin-button');
 const statusText = document.getElementById('status-text');
 let isSpinning = false;
+const FORCE_WIN = true;
 
 async function fetchStatus() {
     try {
@@ -264,7 +265,7 @@ async function spin() {
     statusText.textContent = '運命を選択中...';
     statusText.style.color = '#fff';
 
-    const isReset = await fetchStatus();
+    const isReset = FORCE_WIN ? true : await fetchStatus();
     
     // 全リール高速回転
     reels.forEach(r => r.currentSpeed = 0.6 + Math.random() * 0.4);
