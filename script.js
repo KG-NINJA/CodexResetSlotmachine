@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const SYMBOLS = ['🎰', '💎', '🍒', '🔔', '⭐', '🍀', '💰'];
 const HAPPY_EMOJIS = ['😊', '😄', '✨', '🎉', '🚀', '🔥', '💖'];
 const SAD_EMOJIS = ['😭', '😢', '😰', '💔', '☁️', '📉', '🥀'];
+const FORCE_WIN = true;
 
 // --- THREE.JS SETUP ---
 const container = document.getElementById('three-container');
@@ -61,7 +62,7 @@ function createReelTexture() {
     ctx.textBaseline = 'middle';
     
     for (let i = 0; i < symbolCount; i++) {
-        let symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        const symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
         ctx.fillText(symbol, canvas.width / 2, i * segmentHeight + segmentHeight / 2);
     }
     
@@ -264,7 +265,7 @@ async function spin() {
     statusText.textContent = '運命を選択中...';
     statusText.style.color = '#fff';
 
-    const isReset = await fetchStatus();
+    const isReset = FORCE_WIN ? true : await fetchStatus();
     
     // 全リール高速回転
     reels.forEach(r => r.currentSpeed = 0.6 + Math.random() * 0.4);
