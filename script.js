@@ -47,7 +47,7 @@ const reelRadius = 2.5;
 const reelWidth = 1.8;
 const symbolCount = 12;
 
-function createReelTexture() {
+function createReelTexture(forcedSymbol = null) {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 2048;
@@ -62,7 +62,7 @@ function createReelTexture() {
     ctx.textBaseline = 'middle';
     
     for (let i = 0; i < symbolCount; i++) {
-        const symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        const symbol = forcedSymbol ?? SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
         ctx.fillText(symbol, canvas.width / 2, i * segmentHeight + segmentHeight / 2);
     }
     
@@ -78,7 +78,7 @@ scene.add(reelGroup);
 for (let i = 0; i < reelCount; i++) {
     const geometry = new THREE.CylinderGeometry(reelRadius, reelRadius, reelWidth, 64, 1, true);
     const material = new THREE.MeshStandardMaterial({
-        map: createReelTexture(),
+        map: createReelTexture(FORCE_WIN ? '🎰' : null),
         roughness: 0.3,
         metalness: 0.8
     });
@@ -146,6 +146,7 @@ function initParticles(type) {
 const spinButton = document.getElementById('spin-button');
 const statusText = document.getElementById('status-text');
 let isSpinning = false;
+const FORCE_WIN = true;
 
 async function fetchStatus() {
     try {
