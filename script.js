@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const SYMBOLS = ['🎰', '💎', '🍒', '🔔', '⭐', '🍀', '💰'];
 const HAPPY_EMOJIS = ['😊', '😄', '✨', '🎉', '🚀', '🔥', '💖'];
 const SAD_EMOJIS = ['😭', '😢', '😰', '💔', '☁️', '📉', '🥀'];
+const FORCE_WIN = true;
 
 // --- THREE.JS SETUP ---
 const container = document.getElementById('three-container');
@@ -48,21 +49,23 @@ const symbolCount = 12;
 
 function createReelTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 2048;
+    // CylinderGeometry のUVでは横方向(u)が円周、縦方向(v)が軸方向になる。
+    // リール回転を視覚化するため、記号は横方向に並べる。
+    canvas.width = 2048;
+    canvas.height = 512;
     const ctx = canvas.getContext('2d');
     
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    const segmentHeight = canvas.height / symbolCount;
+    const segmentWidth = canvas.width / symbolCount;
     ctx.font = 'bold 120px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
     for (let i = 0; i < symbolCount; i++) {
-        let symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-        ctx.fillText(symbol, canvas.width / 2, i * segmentHeight + segmentHeight / 2);
+        const symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        ctx.fillText(symbol, i * segmentWidth + segmentWidth / 2, canvas.height / 2);
     }
     
     const texture = new THREE.CanvasTexture(canvas);
@@ -264,7 +267,7 @@ async function spin() {
     statusText.textContent = '運命を選択中...';
     statusText.style.color = '#fff';
 
-    const isReset = await fetchStatus();
+    const isReset = FORCE_WIN ? true : await fetchStatus();
     
     // 全リール高速回転
     reels.forEach(r => r.currentSpeed = 0.6 + Math.random() * 0.4);
