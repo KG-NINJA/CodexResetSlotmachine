@@ -1,22 +1,37 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>3D Slot</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codex Rate Limit Slot 3D</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
 </head>
 <body>
+    <div id="three-container"></div>
+    <div id="flash-overlay"></div>
+    <div id="speed-lines"></div>
 
-<div id="three-container"></div>
+    <div class="ui-overlay">
+        <h1 class="title">Codex 3D Slot</h1>
+        <div class="status-message" id="status-text">
+            レバーを引いて運命を確認せよ...
+        </div>
+        <div class="controls">
+            <button class="spin-btn" id="spin-button">SPIN</button>
+        </div>
+    </div>
 
-<div class="ui">
-  <button id="spin-button">SPIN</button>
-  <div id="status-text">運命を試せ</div>
-</div>
-
-<div id="flash-overlay"></div>
-<div id="speed-lines"></div>
-
-<script type="module" src="main.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
