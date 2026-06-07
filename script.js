@@ -5,24 +5,26 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const SYMBOLS = ['🎰', '💎', '🍒', '🔔', '⭐', '🍀', '💰'];
 const HAPPY_EMOJIS = ['😊', '😄', '✨', '🎉', '🚀', '🔥', '💖'];
 const SAD_EMOJIS = ['😭', '😢', '😰', '💔', '☁️', '📉', '🥀'];
+const FORCE_WIN = true;
 
 // --- THREE.JS SETUP ---
 const container = document.getElementById('three-container');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050505);
-scene.fog = new THREE.Fog(0x050505, 5, 15);
+scene.background = new THREE.Color(0x080006);
+scene.fog = new THREE.Fog(0x080006, 7, 18);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 0, 8);
+const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 1000);
+camera.position.set(0, 0, 9.2);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 container.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.enablePan = false;
+controls.enableRotate = false;
+controls.enableZoom = false;
 controls.maxDistance = 12;
 controls.minDistance = 5;
 
@@ -30,12 +32,12 @@ controls.minDistance = 5;
 const ambientLight = new THREE.AmbientLight(0x404040, 2);
 scene.add(ambientLight);
 
-const spotLight = new THREE.SpotLight(0x007BFF, 100);
+const spotLight = new THREE.SpotLight(0xff174d, 140);
 spotLight.position.set(5, 5, 5);
 spotLight.angle = Math.PI / 6;
 scene.add(spotLight);
 
-const pointLight = new THREE.PointLight(0x00d4ff, 50);
+const pointLight = new THREE.PointLight(0x00eaff, 80);
 pointLight.position.set(-5, -5, 2);
 scene.add(pointLight);
 
@@ -46,23 +48,36 @@ const reelRadius = 2.5;
 const reelWidth = 1.8;
 const symbolCount = 12;
 
-function createReelTexture() {
+function createReelTexture(forcedSymbol = null) {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 2048;
+    // CylinderGeometry のUVでは横方向(u)が円周、縦方向(v)が軸方向になる。
+    // リール回転を視覚化するため、記号は横方向に並べる。
+    canvas.width = 2048;
+    canvas.height = 512;
     const ctx = canvas.getContext('2d');
     
-    ctx.fillStyle = '#f0f0f0';
+    const background = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    background.addColorStop(0, '#d8d8dc');
+    background.addColorStop(0.45, '#ffffff');
+    background.addColorStop(1, '#b9bac0');
+    ctx.fillStyle = background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    const segmentHeight = canvas.height / symbolCount;
+    const segmentWidth = canvas.width / symbolCount;
     ctx.font = 'bold 120px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
     for (let i = 0; i < symbolCount; i++) {
-        let symbol = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-        ctx.fillText(symbol, canvas.width / 2, i * segmentHeight + segmentHeight / 2);
+        const symbol = forcedSymbol ?? SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+        const x = i * segmentWidth;
+        ctx.fillStyle = i % 2 ? '#ffffff' : '#f1f1f4';
+        ctx.fillRect(x, 0, segmentWidth, canvas.height);
+        ctx.strokeStyle = '#c7a84d';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(x + 4, 4, segmentWidth - 8, canvas.height - 8);
+        ctx.fillStyle = '#111';
+        ctx.fillText(symbol, x + segmentWidth / 2, canvas.height / 2);
     }
     
     const texture = new THREE.CanvasTexture(canvas);
@@ -93,7 +108,7 @@ let activeParticleSystem = null;
 
 function initParticles(type) {
     // 圧倒的な量に増量（300 -> 10000）! 画面を埋め尽くす。
-    const count = 10000;
+    const count = 2400;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const spriteNames = type === 'happy' ? HAPPY_EMOJIS : SAD_EMOJIS;
@@ -144,7 +159,17 @@ function initParticles(type) {
 // --- LOGIC ---
 const spinButton = document.getElementById('spin-button');
 const statusText = document.getElementById('status-text');
+const machine = document.getElementById('machine');
+const chanceLamp = document.getElementById('chance-lamp');
+const countdown = document.getElementById('countdown');
+const megaMessage = document.getElementById('mega-message');
+const impactRing = document.getElementById('impact-ring');
+const payoutCount = document.getElementById('payout-count');
+const gameCount = document.getElementById('game-count');
+const stopButtons = [...document.querySelectorAll('.stop-button')];
+const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 let isSpinning = false;
+let totalGames = 0;
 
 async function fetchStatus() {
     try {
@@ -251,93 +276,133 @@ function showSpeedLines(show) {
     }
 }
 
+async function showCountdown() {
+    for (const value of ['3', '2', '1']) {
+        countdown.textContent = value;
+        countdown.classList.remove('show');
+        void countdown.offsetWidth;
+        countdown.classList.add('show');
+        playSound('flash');
+        await wait(620);
+    }
+}
+
+function setJackpotTextures() {
+    reels.forEach(reel => {
+        reel.mesh.material.map.dispose();
+        reel.mesh.material.map = createReelTexture('7️⃣');
+        reel.mesh.material.needsUpdate = true;
+    });
+}
+
+function triggerImpact() {
+    impactRing.classList.remove('show');
+    void impactRing.offsetWidth;
+    impactRing.classList.add('show');
+    triggerFlash();
+}
+
 async function spin() {
     if (isSpinning) return;
     isSpinning = true;
     spinButton.disabled = true;
-    
+    totalGames += 1;
+    gameCount.textContent = String(totalGames).padStart(3, '0');
+    payoutCount.textContent = '00';
+    machine.classList.remove('jackpot');
+    chanceLamp.classList.remove('active');
+    stopButtons.forEach(button => button.classList.remove('ready', 'stopped'));
+
     if (activeParticleSystem) {
         scene.remove(activeParticleSystem.mesh);
+        activeParticleSystem.mesh.geometry.dispose();
+        activeParticleSystem.mesh.material.dispose();
         activeParticleSystem = null;
     }
 
-    statusText.textContent = '運命を選択中...';
-    statusText.style.color = '#fff';
+    statusText.textContent = 'リール始動！ 高確率ゾーン突入';
+    statusText.style.color = '#ffffff';
+    statusText.style.fontSize = '';
+    const isReset = FORCE_WIN || await fetchStatus();
 
-    const isReset = await fetchStatus();
-    
-    // 全リール高速回転
-    reels.forEach(r => r.currentSpeed = 0.6 + Math.random() * 0.4);
+    reels.forEach(reel => {
+        reel.mesh.material.map.dispose();
+        reel.mesh.material.map = createReelTexture();
+        reel.mesh.material.needsUpdate = true;
+        reel.currentSpeed = 0.72 + Math.random() * 0.25;
+    });
+    stopButtons.forEach(button => button.classList.add('ready'));
     playSound('spin');
+    await wait(1500);
 
-    await new Promise(r => setTimeout(r, 2000));
-    
-    statusText.textContent = '解析開始...';
+    statusText.textContent = '前兆発生… ボーナスの気配！';
+    chanceLamp.classList.add('active');
+    machine.classList.add('hype');
+    showSpeedLines(true);
+    await showCountdown();
+
+    megaMessage.classList.remove('show');
+    void megaMessage.offsetWidth;
+    megaMessage.classList.add('show');
+    statusText.textContent = '激熱！ 最終停止まで目を離すな！';
+    await wait(900);
+
     for (let i = 0; i < reelCount; i++) {
-        const isLastReel = (i === reelCount - 1);
-        
+        const isLastReel = i === reelCount - 1;
         if (isLastReel) {
-            statusText.textContent = '最終リール、スキャン...!!!';
-            statusText.style.fontSize = '2rem';
-            statusText.style.color = '#ffd700';
-            
-            // 強調線とスローダウン予告
-            showSpeedLines(true);
-            await new Promise(r => setTimeout(r, 1000));
-            
-            // スローモーションフェーズ
-            const currentSpeed = reels[i].currentSpeed;
-            for (let step = 0; step < 50; step++) {
-                reels[i].currentSpeed = currentSpeed * (0.8 - (step / 70));
-                await new Promise(r => requestAnimationFrame(r));
+            statusText.textContent = '最終リール… 超スローモーション！';
+            setJackpotTextures();
+            for (let pulse = 0; pulse < 4; pulse++) {
+                triggerImpact();
+                playSound('flash');
+                await wait(240);
             }
-            
-            // 決定の瞬間！フラッシュ
-            triggerFlash();
-            playSound('flash');
-            showSpeedLines(false);
         } else {
-            statusText.textContent = `${i + 1}番目 確定...`;
-            await new Promise(r => setTimeout(r, 1200));
+            statusText.textContent = `${i + 1}リール停止！ 期待度上昇！`;
         }
-        
-        // 停止アニメーション
+
         const stopStartSpeed = reels[i].currentSpeed;
-        for (let step = 0; step < 15; step++) {
-            reels[i].currentSpeed = stopStartSpeed * Math.pow(1 - step/15, 2);
-            await new Promise(r => requestAnimationFrame(r));
+        const steps = isLastReel ? 72 : 24;
+        for (let step = 0; step < steps; step++) {
+            reels[i].currentSpeed = stopStartSpeed * Math.pow(1 - step / steps, isLastReel ? 1.4 : 2);
+            await new Promise(resolve => requestAnimationFrame(resolve));
         }
         reels[i].currentSpeed = 0;
+        stopButtons[i].classList.remove('ready');
+        stopButtons[i].classList.add('stopped');
         playSound('stop');
-        
-        if (!isLastReel) await new Promise(r => setTimeout(r, 500));
+        triggerImpact();
+        await wait(isLastReel ? 650 : 550);
     }
 
-    await new Promise(r => setTimeout(r, 500));
+    showSpeedLines(false);
+    machine.classList.remove('hype');
 
     if (isReset) {
-        statusText.textContent = '✨ SUCCESS! RESET DETECTED! ✨';
-        statusText.style.color = '#00ff00';
-        statusText.style.fontSize = '2.5rem';
+        statusText.textContent = '777 超覚醒 BONUS 確定！';
+        statusText.style.color = '#fff3a1';
+        statusText.style.fontSize = 'clamp(18px, 4vw, 28px)';
+        payoutCount.textContent = '77';
+        machine.classList.add('jackpot');
         activeParticleSystem = initParticles('happy');
-        // 勝利のフラッシュ & サウンド
         playSound('win');
-        for(let i=0; i<3; i++) setTimeout(() => {
+        for (let i = 0; i < 6; i++) setTimeout(() => {
             triggerFlash();
             playSound('flash');
-        }, i*200);
+        }, i * 170);
     } else {
-        statusText.textContent = '💀 FAILED... NO RESET YET 💀';
-        statusText.style.color = '#ff3333';
+        statusText.textContent = '惜しい！ 次ゲームに期待';
+        statusText.style.color = '#ff6677';
         activeParticleSystem = initParticles('sad');
         playSound('fail');
     }
 
-    await new Promise(r => setTimeout(r, 3000));
+    await wait(3600);
     isSpinning = false;
     spinButton.disabled = false;
-    statusText.textContent = 'もう一度、運命に挑むか？';
-    statusText.style.fontSize = '1.5rem';
+    chanceLamp.classList.remove('active');
+    statusText.textContent = 'もう一度レバーを叩け！';
+    statusText.style.fontSize = '';
 }
 
 spinButton.addEventListener('click', spin);
@@ -363,8 +428,14 @@ function animate() {
 
 animate();
 
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+function resizeRenderer() {
+    const width = Math.max(container.clientWidth, 1);
+    const height = Math.max(container.clientHeight, 1);
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
+    renderer.setSize(width, height, false);
+}
+
+resizeRenderer();
+window.addEventListener('resize', resizeRenderer);
+new ResizeObserver(resizeRenderer).observe(container);
