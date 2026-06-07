@@ -6,9 +6,10 @@ An extreme, 3D animated slot machine web app to check if the Codex rate limit ha
 
 ## Features
 - **Real-time Status Fetching**: Automatically checks the status via the `hascodexratelimitreset.today` API.
+- **Japanese Pachislot Cabinet**: A chrome-and-neon cabinet, data counter, chance lamp, stop buttons, medal controls, and illuminated side lamps.
 - **Extreme 3D Visuals**: Smooth 3D reels, dynamic lighting, and a foggy, premium atmosphere.
-- **Dramatic Animations**: Slow-motion effects, manga-style speed lines, and full-screen flashes when the final reel stops.
-- **Emoji Explosion**: 10,000+ emojis flood the screen upon result – creating an overwhelming visual impact (and intentionally heavy load).
+- **Dramatic Animations**: A three-count prelude, Gekiatsu warning, cabinet shake, manga-style speed lines, impact rings, slow motion, and repeated flashes before the final reel stops.
+- **Emoji Explosion**: 2,000+ emojis flood the screen upon result – creating an overwhelming visual impact (and intentionally heavy load).
 - **CORS Support**: Integrated with `corsproxy.io` for stable data access.
 
 ## How to Run Locally
@@ -24,9 +25,10 @@ Codexのレート制限がリセットされたかどうかを、圧倒的な演
 
 ## 特徴
 - **リアルタイムステータス取得**: `hascodexratelimitreset.today` APIを通じてリセット状況を自動判定。
+- **日本のパチスロ風筐体**: クロームとネオンの筐体、データカウンター、チャンスランプ、停止ボタン、メダル操作部、サイドランプを再現。
 - **過激な3Dヴィジュアル**: 立体的なリール、動的なライティング、そして深みのあるプレミアムなフォグ演出。
-- **外連味溢れるアニメーション**: 最終リール停止時のスローモーション、集中線、全画面フラッシュによるドラマチックな演出。
-- **顔文字の大噴火**: 結果表示時に10,000個以上の絵文字が画面を埋め尽くします（圧倒的物量による負荷を意図的に演出）。
+- **外連味溢れるアニメーション**: 3カウント、激熱告知、筐体振動、集中線、衝撃波、超スローモーション、連続フラッシュによる大げさな最終リール演出。
+- **顔文字の大噴火**: 結果表示時に2,000個以上の絵文字が画面を埋め尽くします（圧倒的物量による負荷を意図的に演出）。
 - **CORS対応**: `corsproxy.io` を使用し、ブラウザからの安定したAPIアクセスを実現。
 
 ## ローカルでの実行方法
