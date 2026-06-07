@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const SYMBOLS = ['🎰', '💎', '🍒', '🔔', '⭐', '🍀', '💰'];
 const HAPPY_EMOJIS = ['😊', '😄', '✨', '🎉', '🚀', '🔥', '💖'];
 const SAD_EMOJIS = ['😭', '😢', '😰', '💔', '☁️', '📉', '🥀'];
-const FORCE_WIN = true;
+const FORCE_WIN = false;
 
 // --- THREE.JS SETUP ---
 const container = document.getElementById('three-container');
