@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const SYMBOLS = ['🎰', '💎', '🍒', '🔔', '⭐', '🍀', '💰'];
 const HAPPY_EMOJIS = ['😊', '😄', '✨', '🎉', '🚀', '🔥', '💖'];
 const SAD_EMOJIS = ['😭', '😢', '😰', '💔', '☁️', '📉', '🥀'];
-const FORCE_WIN = false;
+const FORCE_WIN = true;
 
 // --- THREE.JS SETUP ---
 const container = document.getElementById('three-container');
@@ -55,31 +55,20 @@ function createReelTexture(forcedSymbol = null) {
     canvas.width = 2048;
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
-    
-    const background = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    background.addColorStop(0, '#d8d8dc');
-    background.addColorStop(0.45, '#ffffff');
-    background.addColorStop(1, '#b9bac0');
-    ctx.fillStyle = background;
+
+    ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    const segmentWidth = canvas.width / symbolCount;
+
+    const segmentHeight = canvas.height / symbolCount;
     ctx.font = 'bold 120px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     for (let i = 0; i < symbolCount; i++) {
         const symbol = forcedSymbol ?? SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-        const x = i * segmentWidth;
-        ctx.fillStyle = i % 2 ? '#ffffff' : '#f1f1f4';
-        ctx.fillRect(x, 0, segmentWidth, canvas.height);
-        ctx.strokeStyle = '#c7a84d';
-        ctx.lineWidth = 8;
-        ctx.strokeRect(x + 4, 4, segmentWidth - 8, canvas.height - 8);
-        ctx.fillStyle = '#111';
-        ctx.fillText(symbol, x + segmentWidth / 2, canvas.height / 2);
+        ctx.fillText(symbol, canvas.width / 2, i * segmentHeight + segmentHeight / 2);
     }
-    
+
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
@@ -92,7 +81,7 @@ scene.add(reelGroup);
 for (let i = 0; i < reelCount; i++) {
     const geometry = new THREE.CylinderGeometry(reelRadius, reelRadius, reelWidth, 64, 1, true);
     const material = new THREE.MeshStandardMaterial({
-        map: createReelTexture(),
+        map: createReelTexture(FORCE_WIN ? '🎰' : null),
         roughness: 0.3,
         metalness: 0.8
     });
@@ -112,15 +101,15 @@ function initParticles(type) {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const spriteNames = type === 'happy' ? HAPPY_EMOJIS : SAD_EMOJIS;
-    
+
     for (let i = 0; i < count; i++) {
         positions[i * 3] = 0;
         positions[i * 3 + 1] = 0;
         positions[i * 3 + 2] = 0;
     }
-    
+
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    
+
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 128;
@@ -128,7 +117,7 @@ function initParticles(type) {
     ctx.font = '80px serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     const emoji = spriteNames[Math.floor(Math.random() * spriteNames.length)];
     ctx.clearRect(0, 0, 128, 128);
     ctx.fillText(emoji, 64, 64);
@@ -142,10 +131,10 @@ function initParticles(type) {
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
-    
+
     const pMesh = new THREE.Points(geometry, material);
     scene.add(pMesh);
-    
+
     return {
         mesh: pMesh,
         velocities: Array.from({ length: count }, () => new THREE.Vector3(
@@ -177,9 +166,9 @@ async function fetchStatus() {
         const response = await fetch(proxyUrl);
         const data = await response.json();
         return data.state === 'yes';
-    } catch (error) { 
+    } catch (error) {
         console.error('Fetch error:', error);
-        return false; 
+        return false;
     }
 }
 
@@ -191,12 +180,12 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(type) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    
+
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    
+
     const now = audioCtx.currentTime;
 
     if (type === 'spin') {
@@ -306,12 +295,6 @@ async function spin() {
     if (isSpinning) return;
     isSpinning = true;
     spinButton.disabled = true;
-    totalGames += 1;
-    gameCount.textContent = String(totalGames).padStart(3, '0');
-    payoutCount.textContent = '00';
-    machine.classList.remove('jackpot');
-    chanceLamp.classList.remove('active');
-    stopButtons.forEach(button => button.classList.remove('ready', 'stopped'));
 
     if (activeParticleSystem) {
         scene.remove(activeParticleSystem.mesh);
@@ -325,13 +308,10 @@ async function spin() {
     statusText.style.fontSize = '';
     const isReset = FORCE_WIN || await fetchStatus();
 
-    reels.forEach(reel => {
-        reel.mesh.material.map.dispose();
-        reel.mesh.material.map = createReelTexture();
-        reel.mesh.material.needsUpdate = true;
-        reel.currentSpeed = 0.72 + Math.random() * 0.25;
-    });
-    stopButtons.forEach(button => button.classList.add('ready'));
+    const isReset = FORCE_WIN ? true : await fetchStatus();
+
+    // 全リール高速回転
+    reels.forEach(r => r.currentSpeed = 0.6 + Math.random() * 0.4);
     playSound('spin');
     await wait(1500);
 
@@ -347,20 +327,37 @@ async function spin() {
     statusText.textContent = '激熱！ 最終停止まで目を離すな！';
     await wait(900);
 
+    await new Promise(r => setTimeout(r, 2000));
+
+    statusText.textContent = '解析開始...';
     for (let i = 0; i < reelCount; i++) {
-        const isLastReel = i === reelCount - 1;
+        const isLastReel = (i === reelCount - 1);
+
         if (isLastReel) {
-            statusText.textContent = '最終リール… 超スローモーション！';
-            setJackpotTextures();
-            for (let pulse = 0; pulse < 4; pulse++) {
-                triggerImpact();
-                playSound('flash');
-                await wait(240);
+            statusText.textContent = '最終リール、スキャン...!!!';
+            statusText.style.fontSize = '2rem';
+            statusText.style.color = '#ffd700';
+
+            // 強調線とスローダウン予告
+            showSpeedLines(true);
+            await new Promise(r => setTimeout(r, 1000));
+
+            // スローモーションフェーズ
+            const currentSpeed = reels[i].currentSpeed;
+            for (let step = 0; step < 50; step++) {
+                reels[i].currentSpeed = currentSpeed * (0.8 - (step / 70));
+                await new Promise(r => requestAnimationFrame(r));
             }
+
+            // 決定の瞬間！フラッシュ
+            triggerFlash();
+            playSound('flash');
+            showSpeedLines(false);
         } else {
             statusText.textContent = `${i + 1}リール停止！ 期待度上昇！`;
         }
 
+        // 停止アニメーション
         const stopStartSpeed = reels[i].currentSpeed;
         const steps = isLastReel ? 72 : 24;
         for (let step = 0; step < steps; step++) {
@@ -371,8 +368,8 @@ async function spin() {
         stopButtons[i].classList.remove('ready');
         stopButtons[i].classList.add('stopped');
         playSound('stop');
-        triggerImpact();
-        await wait(isLastReel ? 650 : 550);
+
+        if (!isLastReel) await new Promise(r => setTimeout(r, 500));
     }
 
     showSpeedLines(false);
@@ -412,7 +409,7 @@ function animate() {
     requestAnimationFrame(animate);
     controls.update();
     reels.forEach(reel => reel.mesh.rotation.x += reel.currentSpeed);
-    
+
     if (activeParticleSystem) {
         const positions = activeParticleSystem.mesh.geometry.attributes.position.array;
         for (let i = 0; i < activeParticleSystem.velocities.length; i++) {
